@@ -12,3 +12,7 @@ pub fn lines_from_file(filename: impl AsRef<Path>) -> Vec<String> {
         .map(|l| l.expect("Could not parse line"))
         .collect()
 }
+
+pub fn str_slice_to_vec_string(input: &[&str]) -> Vec<String> {
+    input.iter().map(|s| s.to_string()).collect()
+}

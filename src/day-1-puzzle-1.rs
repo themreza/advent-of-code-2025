@@ -71,7 +71,6 @@ fn day_1_puzzle_1_improved(init_pos: u8, rotations: Vec<String>) -> u64 {
     zero_count
 }
 
-
 fn main() {
     let lines = utils::lines_from_file("inputs/day-1-puzzle-1.txt");
     println!("{}", day_1_puzzle_1(50, lines));
@@ -79,37 +78,19 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
+    use super::*;
 
     #[test]
     fn test_day_1_puzzle_1() {
-        assert_eq!(day_1_puzzle_1(50, vec![
-            "L68".to_string(),
-            "L30".to_string(),
-            "R48".to_string(),
-            "L5".to_string(),
-            "R60".to_string(),
-            "L55".to_string(),
-            "L1".to_string(),
-            "L99".to_string(),
-            "R14".to_string(),
-            "L82".to_string(),
-        ]), 3)
+        assert_eq!(day_1_puzzle_1(50, utils::str_slice_to_vec_string(&[
+            "L68", "L30", "R48", "L5", "R60", "L55", "L1", "L99", "R14", "L82",
+        ])), 3);
     }
 
     #[test]
     fn test_day_1_puzzle_1_improved() {
-        assert_eq!(day_1_puzzle_1_improved(50, vec![
-            "L68".to_string(),
-            "L30".to_string(),
-            "R48".to_string(),
-            "L5".to_string(),
-            "R60".to_string(),
-            "L55".to_string(),
-            "L1".to_string(),
-            "L99".to_string(),
-            "R14".to_string(),
-            "L82".to_string(),
-        ]), 3)
+        assert_eq!(day_1_puzzle_1_improved(50, utils::str_slice_to_vec_string(&[
+            "L68", "L30", "R48", "L5", "R60", "L55", "L1", "L99", "R14", "L82",
+        ])), 3);
     }
 }

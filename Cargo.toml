@@ -7,4 +7,8 @@ edition = "2024"
 name = "day-1-puzzle-1"
 path = "src/day-1-puzzle-1.rs"
 
+[[bin]]
+name = "day-1-puzzle-2"
+path = "src/day-1-puzzle-2.rs"
+
 [dependencies]
