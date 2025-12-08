@@ -24,3 +24,12 @@ tests:
 docs:
 	@echo "Generating documentation"
 	@cargo doc --open
+fmt:
+	@echo "Formatting code"
+	@cargo fmt
+lint:
+	@echo "Linting code"
+	@cargo clippy
+fix:
+	@echo "Linting and fixing code"
+	@cargo clippy --fix

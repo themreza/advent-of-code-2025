@@ -15,12 +15,13 @@ The solutions are not perfect or fully optimized. I gave each challenge some tho
 - [Rust Design Patterns](https://rust-unofficial.github.io/patterns/)
 - [Exploring Rust as a Go Developer](https://zerotohero.dev/roadmap/learning-rust/)
 - [Rust by Example](https://doc.rust-lang.org/stable/rust-by-example/)
+- [Clippy linter](https://github.com/rust-lang/rust-clippy)
 
 ## AI Disclaimer
 
 I wrote the solutions myself as the primary objective was learning Rust and just having fun.
 
-After submitting the solution, I then asked for code review from AI to figure out if there are more idiomatic and efficient approaches. I've included both versions, with the improved function ending in `_improved`.
+After submitting the solution, I then asked for code review from AI to figure out if there are more idiomatic and efficient approaches. I've included both versions, with the improved function ending in `_improved` or in a separate file with the `-improved.rs` suffix.
 
 ## Author
 

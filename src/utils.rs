@@ -1,6 +1,6 @@
 use std::{
     fs::File,
-    io::{prelude::*, BufReader},
+    io::{BufReader, prelude::*},
     path::Path,
 };
 
@@ -13,6 +13,7 @@ pub fn lines_from_file(filename: impl AsRef<Path>) -> Vec<String> {
         .collect()
 }
 
+#[allow(dead_code)]
 pub fn str_slice_to_vec_string(input: &[&str]) -> Vec<String> {
     input.iter().map(|s| s.to_string()).collect()
 }
