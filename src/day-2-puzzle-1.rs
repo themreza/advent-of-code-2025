@@ -30,7 +30,7 @@ fn day_2_puzzle_1(input: &str) -> u128 {
         // Weird syntax: .. doesn't include the last number, but .= does :/
         for i in range.0..=range.1 {
             let len: u32  = i.checked_ilog10().unwrap_or(0) + 1;
-            if len % 2 != 0 {
+            if !len.is_multiple_of(2) {
                 //println!("skipping {}", i);
                 continue;
             }
@@ -70,7 +70,7 @@ impl NumberRange {
         }
         let from_len: u32 = from.checked_ilog10().unwrap_or(0) + 1;
         let to_len: u32 = to.checked_ilog10().unwrap_or(0) + 1;
-        if from_len == to_len && from_len % 2 != 0 {
+        if from_len == to_len && !from_len.is_multiple_of(2) {
             return Err("both numbers in the range must not be of the same odd length");
         }
         Ok(NumberRange(from, to))
@@ -94,7 +94,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_day_1_puzzle_1_number_range_from_str() {
+    fn test_day_2_puzzle_1_number_range_from_str() {
         assert_eq!(NumberRange::from_str("invalid"), Err("number range must be delimited by a -"), "an invalid input without a - must throw a parsing error");
         assert_eq!(NumberRange::from_str("-"), Err("numbers in the range must be integers"), "an invalid input without any numbers must throw a parsing error");
         assert_eq!(NumberRange::from_str("1-2-"), Err("numbers in the range must be integers"), "an invalid input with more than one - must throw a parsing error");
@@ -109,7 +109,7 @@ mod tests {
     }
 
     #[test]
-    fn test_day_1_puzzle_1() {
+    fn test_day_2_puzzle_1() {
         assert_eq!(
             day_2_puzzle_1(
                 &"11-22,95-115,998-1012,1188511880-1188511890,222220-222224,1698522-1698528,\

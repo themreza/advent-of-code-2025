@@ -3,7 +3,7 @@ mod utils;
 /// # Day 1, Puzzle 2: Secret Entrance ([challenge description](https://adventofcode.com/2025/day/1))
 ///
 /// ## Summary
-/// This is similar to Day 1, Puzzle 1, but with a twist: Rather than counting the number of times
+/// This is similar to Day 1 - Puzzle 1, but with a twist: Rather than counting the number of times
 /// a rotation ends in number 0, we should now count any time number 0 is crossed, whether during or
 /// at the end of a rotation.
 ///
@@ -24,16 +24,15 @@ fn day_1_puzzle_2(init_pos: u8, rotations: Vec<String>) -> u64 {
     let mut zero_count: u64 = 0;
     for rotation in rotations.iter() {
         let mut chars: std::str::Chars<'_> = rotation.chars();
-        let multiplier: i64;
-        match chars.next() {
+        let multiplier: i64 = match chars.next() {
             Some('L') => {
-                multiplier = -1;
+                -1
             }
             Some('R') => {
-                multiplier = 1;
+                1
             }
             _ => panic!("rotations must start with L or R"),
-        }
+        };
         let dist: i64 = chars
             .as_str()
             .parse::<u64>()

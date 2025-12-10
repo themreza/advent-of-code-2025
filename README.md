@@ -17,6 +17,10 @@ The solutions are not perfect or fully optimized. I gave each challenge some tho
 - [Rust by Example](https://doc.rust-lang.org/stable/rust-by-example/)
 - [Clippy linter](https://github.com/rust-lang/rust-clippy)
 
+## Algorithm Resources
+
+- [VisuAlgo - Visualized Algorithms](https://visualgo.net)
+
 ## AI Disclaimer
 
 I wrote the solutions myself as the primary objective was learning Rust and just having fun.

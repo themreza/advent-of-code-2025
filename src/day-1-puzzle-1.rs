@@ -25,16 +25,15 @@ fn day_1_puzzle_1(init_pos: u8, rotations: Vec<String>) -> u64 {
     let mut zero_count: u64 = 0;
     for rotation in rotations.iter() {
         let mut chars: std::str::Chars<'_> = rotation.chars();
-        let multiplier: i64;
-        match chars.next() {
+        let multiplier: i64 = match chars.next() {
             Some('L') => {
-                multiplier = -1;
+                -1
             }
             Some('R') => {
-                multiplier = 1;
+                1
             }
             _ => panic!("rotations must start with L or R"),
-        }
+        };
         let dist: i64 = chars
             .as_str()
             .parse::<u64>()
