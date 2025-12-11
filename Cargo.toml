@@ -3,20 +3,8 @@ name = "advent-of-code-2025"
 version = "0.1.0"
 edition = "2024"
 
-[[bin]]
-name = "day-1-puzzle-1"
-path = "src/day-1-puzzle-1.rs"
-
-[[bin]]
-name = "day-1-puzzle-2"
-path = "src/day-1-puzzle-2.rs"
-
-[[bin]]
-name = "day-2-puzzle-1"
-path = "src/day-2-puzzle-1.rs"
-
-[[bin]]
-name = "day-2-puzzle-2"
-path = "src/day-2-puzzle-2.rs"
+[lib]
+name = "aoc2025"
+path = "src/lib.rs"
 
 [dependencies]

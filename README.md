@@ -6,7 +6,7 @@ The challenges have a Christmas theme and consist of stories of the Elves based 
 
 While there are usually 25 challenges, this year's Advent of Code ends on December 12. It also does not feature a global leaderboard due to AI misuse.
 
-My solutions are in the `src` directory. You can run them via `make run <binary name, e.g. day-1-puzzle-2>`, run the tests with `make tests`, and read the documentation with `make docs`.
+My solutions are in the `src` directory. You can run them via `make run <binary name, e.g. day1>`, run the tests with `make tests`, and read the documentation with `make docs`.
 
 The solutions are not perfect or fully optimized. I gave each challenge some thought, but I mainly did this to get more comfortable with Rust. But just because it's Rust, it should be fast, right? 😛
 
@@ -25,7 +25,8 @@ The solutions are not perfect or fully optimized. I gave each challenge some tho
 
 I wrote the solutions myself as the primary objective was learning Rust and just having fun.
 
-After submitting the solution, I then asked for code review from AI to figure out if there are more idiomatic and efficient approaches. I've included both versions, with the improved function ending in `_improved` or in a separate file with the `-improved.rs` suffix.
+After submitting the solution, I then asked for code review from AI to figure out if there are more idiomatic and efficient approaches. I've included both versions, with the improved version in a 
+separate file with the `-improved.rs` suffix.
 
 ## Author
 

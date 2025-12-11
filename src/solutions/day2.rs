@@ -1,7 +1,7 @@
-mod utils;
+//! # Day 2 - Puzzle 1: Gift Shop ([challenge description](https://adventofcode.com/2025/day/2))
 
-/// # Day 2 - Puzzle 1: Gift Shop ([challenge description](https://adventofcode.com/2025/day/2))
-///
+/// # Puzzle 1
+/// 
 /// ## Summary
 /// Given a comma-separated list of hyphen-separated consecutive number intervals, determine the
 /// sum of numbers within all intervals that are composed of only two repeated sequences of digits.
@@ -16,10 +16,8 @@ mod utils;
 /// number in each range, add it to the total sum if the number's length is even ((log_10(n)+1) % 2 == 0),
 /// and its first half (n/1e<len_n/2>) is equal to its second half (n mod 1e<len_n/2>).
 /// This solution avoids constantly converting between string and integer to assess symmetry.
-/// Some edge case number ranges to immediately ignore:
-/// - those with a from and to number of odd and equal length (e.g. 111-999 and 11111-99999)
 /// 
-fn day_2_puzzle_1(input: &str) -> u128 {
+pub fn puzzle1(input: &str) -> u128 {
     let mut sum: u128 = 0;
     let ranges: Vec<&str> = input.split(",").collect();
     for range_str in ranges {
@@ -27,6 +25,11 @@ fn day_2_puzzle_1(input: &str) -> u128 {
             //println!("skipping {}", range_str);
             continue;
         };
+        let from_len: u32 = range.0.checked_ilog10().unwrap_or(0) + 1;
+        let to_len: u32 = range.1.checked_ilog10().unwrap_or(0) + 1;
+        if from_len == to_len && !from_len.is_multiple_of(2) {
+            continue;
+        }
         // Weird syntax: .. doesn't include the last number, but .= does :/
         for i in range.0..=range.1 {
             let len: u32  = i.checked_ilog10().unwrap_or(0) + 1;
@@ -48,6 +51,39 @@ fn day_2_puzzle_1(input: &str) -> u128 {
     sum
 }
 
+
+/// # Puzzle 2
+///
+/// ## Summary
+/// This is similar to Day 2 - Puzzle 1, but with a twist: Rather than numbers that only consist
+/// of a sequence of digits repeated exactly twice, invalid IDs now include those with the digits 
+/// repeated at least twice.
+/// 
+/// ## Solution
+/// Let's take a simpler, string-based approach this time. I originally had a different approach
+/// similar to the Knuth-Morris-Pratt (KMP) algorithm based on comparing the prefixes at every index, 
+/// but found a much simpler approach that concatenates the string with itself, trim the first and last
+/// digits, and check if the original string appears in it. For example, given the number 565656, 
+/// concatenate it to form 565656565656 and then check if 565656 can be found in 6565656565.
+/// 
+pub fn puzzle2(input: &str) -> u128 {
+     let mut sum: u128 = 0;
+    let ranges: Vec<&str> = input.split(',').collect();
+    for range_str in ranges {
+        let Ok(range) = NumberRange::from_str(range_str) else {
+            continue;
+        };
+        for i in range.0..=range.1 {
+            let i_str: String = i.to_string();
+            let concat_str = format!("{}{}", i_str, i_str);
+            if concat_str[1..concat_str.len()-1].contains(&i_str) {
+                sum += i as u128;
+            }
+        }
+    }
+    sum
+}
+
 #[derive(PartialEq, Debug)]
 struct NumberRange(u64, u64);
 
@@ -60,7 +96,8 @@ impl NumberRange {
         // The alternative approach is to use .map_err() with a Rust closure (anonymous function) that returns a static error.
         // I tried finding a quick way to retain the original message, but couldn't, so I just went with a static message.
         // I'm slowly starting to see how Rust's rather complex syntax can get in the way, but I suppose it's just part of the learning curve.
-        if from_str.starts_with("0") || to_str.starts_with("0") {
+        // "" should be used for strings and '' for literal characters
+        if from_str.starts_with('0') || to_str.starts_with('0') {
             return Err("numbers in the ranger must not begin with a 0");
         }
         let from: u64 = from_str.parse().map_err(|_| "numbers in the range must be integers")?;
@@ -68,54 +105,66 @@ impl NumberRange {
         if to <= from {
             return Err("the second number in the range must be larger than the first");
         }
-        let from_len: u32 = from.checked_ilog10().unwrap_or(0) + 1;
-        let to_len: u32 = to.checked_ilog10().unwrap_or(0) + 1;
-        if from_len == to_len && !from_len.is_multiple_of(2) {
-            return Err("both numbers in the range must not be of the same odd length");
-        }
         Ok(NumberRange(from, to))
     }
-}
-
-fn main() {
-    let lines: Vec<String> = utils::lines_from_file("inputs/day-2-puzzle-1.txt");
-    println!(
-        "{}",
-        day_2_puzzle_1(
-            lines
-                .first()
-                .expect("input file must not be empty for day 2 puzzle 1")
-        )
-    );
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    mod number_range {
+        use super::*;
+
+        #[test]
+        fn rejects_missing_delimiter() {
+            assert!(NumberRange::from_str("invalid").is_err());
+        }
+
+        #[test]
+        fn rejects_empty_parts() {
+            assert!(NumberRange::from_str("-").is_err());
+            assert!(NumberRange::from_str("1-").is_err());
+            assert!(NumberRange::from_str("-1").is_err());
+        }
+
+        #[test]
+        fn rejects_multiple_delimiters() {
+            assert!(NumberRange::from_str("1-2-3").is_err());
+        }
+
+        #[test]
+        fn rejects_leading_zeros() {
+            assert!(NumberRange::from_str("01-2").is_err());
+            assert!(NumberRange::from_str("1-02").is_err());
+        }
+
+        #[test]
+        fn rejects_invalid_ordering() {
+            assert!(NumberRange::from_str("2-1").is_err());
+        }
+
+        #[test]
+        fn accepts_valid_range() {
+            assert_eq!(
+                NumberRange::from_str("11-22"),
+                Ok(NumberRange(11, 22))
+            );
+        }
+    }
+
+    const TEST_INPUT: &str = "11-22,95-115,998-1012,1188511880-1188511890,222220-222224,1698522-1698528,\
+        446443-446449,38593856-38593862,565653-565659,824824821-824824827,2121212118-2121212124";
+
+
     #[test]
-    fn test_day_2_puzzle_1_number_range_from_str() {
-        assert_eq!(NumberRange::from_str("invalid"), Err("number range must be delimited by a -"), "an invalid input without a - must throw a parsing error");
-        assert_eq!(NumberRange::from_str("-"), Err("numbers in the range must be integers"), "an invalid input without any numbers must throw a parsing error");
-        assert_eq!(NumberRange::from_str("1-2-"), Err("numbers in the range must be integers"), "an invalid input with more than one - must throw a parsing error");
-        assert_eq!(NumberRange::from_str("1-"), Err("numbers in the range must be integers"), "an invalid input with only the first number being valid must throw a parsing error");
-        assert_eq!(NumberRange::from_str("-1"), Err("numbers in the range must be integers"), "an invalid input with only the second number being valid must throw a parsing error");
-        assert_eq!(NumberRange::from_str("01-2"), Err("numbers in the ranger must not begin with a 0"), "an invalid input with the first number starting with a 0 must throw a parsing error");
-        assert_eq!(NumberRange::from_str("1-02"), Err("numbers in the ranger must not begin with a 0"), "an invalid input with the second number starting with a 0 must throw a parsing error");
-        assert_eq!(NumberRange::from_str("2-1"), Err("the second number in the range must be larger than the first"), "an invalid input with the second number larger than the first must throw a parsing error");
-        assert_eq!(NumberRange::from_str("2-1"), Err("the second number in the range must be larger than the first"), "an invalid input with the second number larger than the first must throw a parsing error");
-        assert_eq!(NumberRange::from_str("1-2"), Err("both numbers in the range must not be of the same odd length"), "an invalid input with both numbers being of the same odd length must throw a parsing error");
-        assert_eq!(NumberRange::from_str("11-22"), Ok(NumberRange(11,22)), "a valid input must be parsed into NumberRange");      
+    fn test_puzzle1() {
+        assert_eq!(puzzle1(TEST_INPUT), 1227775554);
     }
 
     #[test]
-    fn test_day_2_puzzle_1() {
-        assert_eq!(
-            day_2_puzzle_1(
-                &"11-22,95-115,998-1012,1188511880-1188511890,222220-222224,1698522-1698528,\
-        446443-446449,38593856-38593862,565653-565659,824824821-824824827,2121212118-2121212124"
-            ),
-            1227775554
-        );
+    fn test_puzzle2() {
+        assert_eq!(puzzle2(TEST_INPUT), 4174379265);
     }
 }
+
