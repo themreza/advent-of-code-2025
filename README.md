@@ -28,6 +28,12 @@ I wrote the solutions myself as the primary objective was learning Rust and just
 After submitting the solution, I then asked for code review from AI to figure out if there are more idiomatic and efficient approaches. I've included both versions, with the improved version in a 
 separate file with the `-improved.rs` suffix.
 
+I used Claude 4.5 Opus with the following prompt to generate the improved version:
+
+> I'm learning Rust and I've written this code. Improve the code to make it as idiomatic, clean, easy to read,
+> and efficient as possible while not changing the algorithms. Include a summary of changes under the "Day ..."
+> inner doc comment with a Markdown format.
+
 ## Author
 
 Challenges written by [Eric Wastl (Advent of Code)](https://adventofcode.com/2025/about).
