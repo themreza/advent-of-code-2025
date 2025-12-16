@@ -1,3 +1,5 @@
+#![allow(clippy::all)]
+
 //! # Day 1: Secret Entrance ([challenge description](https://adventofcode.com/2025/day/1))
 
 /// # Puzzle 1

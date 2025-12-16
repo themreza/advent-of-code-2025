@@ -1,3 +1,5 @@
+#![allow(clippy::all)]
+
 //! # Day 3: Lobby ([challenge description](https://adventofcode.com/2025/day/3))
 
 /// # Puzzle 1

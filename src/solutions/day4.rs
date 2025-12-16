@@ -1,3 +1,5 @@
+#![allow(clippy::all)]
+
 //! # Day 4: Printing Department ([challenge description](https://adventofcode.com/2025/day/4))
 
 /// # Puzzle 1
