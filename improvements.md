@@ -1,65 +1,48 @@
-# Rust Learning Analysis: Advent of Code Solutions (days 1-4)
+# Rust Code Review: Advent of Code Solutions
 
-## Overall Assessment
+## Overall
 
-Your solutions show **solid algorithmic thinking** and problem-solving skills. You understand the problems well and implement working solutions. However, there are consistent patterns where your code could be more **idiomatic**, **safe**, and **efficient** in a Rust-specific way.
-
-> **Key Insight:** The gap between your code and the improved versions isn't about correctness—it's about leveraging Rust's type system, ownership model, and iterator ecosystem to write code that is simultaneously safer, more concise, and more performant.
+Your solutions work correctly and show solid algorithmic thinking. The main gap is idiomatic Rust - leveraging the type system and iterator chains to write safer, cleaner code.
 
 ---
 
-## Key Areas of Weakness & Focus Points
+## Key Patterns to Fix
 
-### 1. Iterator Chains vs. Imperative Loops ⭐ HIGH PRIORITY
+### 1. Iterator chains over loops
 
-**Your Pattern:**
+You write a lot of manual loops with mutable state:
+
 ```rust
-// Day 2, lines 22-51
+// Day 2 - your version
 let mut sum: u128 = 0;
-let ranges: Vec<&str> = input.split(",").collect();
 for range_str in ranges {
-    let Ok(range) = NumberRange::from_str(range_str) else {
-        continue;
-    };
-    // ... more loops
+    let Ok(range) = NumberRange::from_str(range_str) else { continue };
     for i in range.0..=range.1 {
-        // ... more conditions
         sum += i as u128;
     }
 }
-sum
 ```
 
-**Improved Pattern:**
+Prefer iterator chains:
+
 ```rust
-// Day 2 improved, lines 47-66
+// Improved
 input
     .split(',')
     .filter_map(|s| s.parse::<NumberRange>().ok())
     .flat_map(|range| range.0..=range.1)
-    .filter(|&n| { /* conditions */ })
     .map(u128::from)
     .sum()
 ```
 
-**Why This Matters:**
-- Rust iterators are **zero-cost abstractions**—they compile to the same assembly as manual loops but are more composable and often easier to optimize
-- Methods like `filter_map`, `flat_map`, and `fold` eliminate mutation and make data flow explicit
-- This pattern appears in ALL your solutions
-
-**What to Practice:**
-- `filter_map` - transform and filter in one step
-- `flat_map` - flatten nested iterations
-- `fold` - build values incrementally (great for arithmetic)
-- `enumerate()` - iterate with indices
+This pattern shows up in every solution. Learn: `filter_map`, `flat_map`, `fold`, `enumerate`.
 
 ---
 
-### 2. Type Modeling with Enums & Structs ⭐ HIGH PRIORITY
+### 2. Type modeling with enums/structs
 
-**Your Pattern:**
 ```rust
-// Day 1, lines 28-36: Inline parsing with magic numbers
+// Day 1 - your version
 let multiplier: i64 = match chars.next() {
     Some('L') => -1,
     Some('R') => 1,
@@ -67,297 +50,127 @@ let multiplier: i64 = match chars.next() {
 };
 ```
 
-**Improved Pattern:**
+Make invalid states unrepresentable:
+
 ```rust
-// Day 1 improved, lines 28-51: Domain modeling
-enum Direction {
-    Left,
-    Right,
-}
+// Improved
+enum Direction { Left, Right }
 
 impl Direction {
-    fn parse(c: char) -> Self { /* ... */ }
-    const fn multiplier(self) -> i64 { /* ... */ }
+    fn multiplier(self) -> i64 {
+        match self { Left => -1, Right => 1 }
+    }
 }
 ```
 
-**Why This Matters:**
-- **Make illegal states unrepresentable**
-- By encoding business logic in types, the compiler catches errors at compile-time instead of runtime
-- Enums prevent invalid directions; structs group related data
-- This is one of Rust's superpowers compared to other languages
-
-**Examples in Your Code:**
-- Day 1: Direction could be an enum instead of multiplier integers
-- Day 4: Grid positions could be a `Position(usize, usize)` type with methods
+The compiler prevents invalid directions. This is Rust's superpower.
 
 ---
 
-### 3. Ownership & Borrowing ⭐ HIGH PRIORITY
+### 3. Borrowing vs ownership
 
-**Your Pattern:**
 ```rust
-// Day 1, line 21: Takes ownership unnecessarily
+// Day 1 - your version
 pub fn puzzle1(init_pos: u8, rotations: Vec<String>) -> u64
 ```
 
-**Improved Pattern:**
+Taking `Vec<String>` forces callers to give up ownership or clone. Better:
+
 ```rust
-// Day 1 improved, line 91: Generic borrowing
 pub fn puzzle1(init_pos: u8, rotations: &[impl AsRef<str>]) -> u64
 ```
 
-**Why This Matters:**
-- Taking `Vec<String>` forces callers to give up ownership or clone data
-- Using `&[impl AsRef<str>]` accepts `&[&str]`, `&[String]`, or any slice of string-like types **without copying**
-- This pattern appears in day1, and understanding when to borrow vs. own is fundamental to Rust
-
-**Rules of Thumb:**
-- If you only read data: use `&T` or `&[T]`
-- If you need to modify: use `&mut T`
-- If you need to own: use `T`
-- Generic over string types: use `impl AsRef<str>` or `&str`
+Rule: borrow (`&T`) unless you need to own or mutate.
 
 ---
 
-### 4. Safe Type Conversions ⭐ MEDIUM PRIORITY
+### 4. Safe type conversions
 
-**Your Pattern:**
+You use `as` everywhere:
 ```rust
-// Multiple uses of `as` throughout:
-let curr_pos: i64 = init_pos as i64;  // day1.rs:25
-sum += i as u128;                     // day2.rs:48
-let len_i = matrix.len() as i128;     // day4.rs:36
+let curr_pos: i64 = init_pos as i64;  // day1
+sum += i as u128;                      // day2
+let len_i = matrix.len() as i128;     // day4
 ```
 
-**Improved Pattern:**
+Use `From`/`Into` for lossless conversions:
 ```rust
-let curr_pos = i64::from(init_pos);   // day1-improved.rs:94
-u128::from(result[0]) * 10            // day3-improved.rs:69
+let curr_pos = i64::from(init_pos);
 ```
 
-**Why This Matters:**
-- The `as` operator can **silently truncate** (e.g., `300_u16 as u8 == 44`)
-- Use `From`/`Into` traits when conversions are lossless
-- Use explicit checked conversions for potentially lossy operations
-- Day 4's mixing of `i128` and `usize` with constant `as usize` casts is a red flag
-
-**Conversion Hierarchy:**
-1. `From`/`Into` - guaranteed lossless conversions
-2. `TryFrom`/`TryInto` - fallible conversions that return `Result`
-3. Explicit methods like `to_string()`, `to_owned()`
-4. `as` - only when you understand and accept the truncation behavior
+The `as` operator can silently truncate (`300_u16 as u8 == 44`).
 
 ---
 
-### 5. Standard Library Traits ⭐ MEDIUM PRIORITY
+### 5. Standard library traits
 
-**Your Pattern:**
 ```rust
-// Day 2, lines 91-109: Custom method
+// Day 2 - your version
 impl NumberRange {
-    pub fn from_str(input: &str) -> Result<Self, &str> { /* ... */ }
+    pub fn from_str(input: &str) -> Result<Self, &str> { ... }
 }
-// Usage:
-NumberRange::from_str(range_str)
+// Usage: NumberRange::from_str(s)
 ```
 
-**Improved Pattern:**
+Implement `FromStr` to get `.parse()` for free:
+
 ```rust
-// Day 2 improved, lines 101-126: Standard trait
 impl FromStr for NumberRange {
     type Err = &'static str;
-    fn from_str(input: &str) -> Result<Self, Self::Err> { /* ... */ }
+    fn from_str(s: &str) -> Result<Self, Self::Err> { ... }
 }
-// Usage:
-s.parse::<NumberRange>()
+// Usage: s.parse::<NumberRange>()
 ```
 
-**Why This Matters:**
-- Implementing standard traits makes your types work seamlessly with Rust's ecosystem
-- `parse()` is a method on `&str` that works with ANY type implementing `FromStr`
-- Other code (like `filter_map`) expects these standard traits
-
-**Common Traits to Learn:**
-- `FromStr` - parsing from strings
-- `Display` / `Debug` - formatting output
-- `From` / `Into` - type conversions
-- `Default` - default values
-- `PartialEq` / `Eq` - equality comparison
-- `PartialOrd` / `Ord` - ordering
+Common traits: `FromStr`, `Display`, `From`, `TryFrom`, `Default`.
 
 ---
 
-### 6. Code Duplication & Helper Functions ⭐ MEDIUM PRIORITY
+### 6. Error handling
 
-**Your Pattern:**
 ```rust
-// Day 4: 60 lines duplicated between puzzle1 and puzzle2
-// Identical bounds checking logic appears in both functions
-for c in 0..c_len {
-    let i2 = i + check_coordinates[c].0;
-    let j2 = j + check_coordinates[c].1;
-    if i2 < 0 || i2 >= len_i || j2 < 0 || j2 >= len_j {
-        continue;
-    }
-    if matrix[i2 as usize][j2 as usize] == '@' {
-        count += 1;
-    }
-}
-```
-
-**Improved Pattern:**
-```rust
-// Day 4 improved, lines 30-40: Extracted helper
-fn count_adjacent(matrix: &[Vec<char>], row: usize, col: usize) -> usize {
-    DIRECTIONS
-        .iter()
-        .filter(|(dr, dc)| /* ... */)
-        .count()
-}
-```
-
-**Impact:**
-- Day 4 went from 134 lines → 108 lines (19% reduction) while becoming more readable
-- Single source of truth for the logic
-- Easier to test and modify
-
-**When to Extract Helpers:**
-- Logic is duplicated
-- A block of code has a clear, nameable purpose
-- You find yourself adding comments to explain what a section does
-
----
-
-### 7. Error Handling Antipatterns ⭐ MEDIUM PRIORITY
-
-**Your Pattern:**
-```rust
-// Day 3, lines 38-44
+// Day 3 - returns Some(0) on parse error!
 match format!("{}{}", arr[0], arr[1]).parse::<u128>() {
     Ok(num) => Some(num),
     Err(e) => {
-        println!("failed to parse integer from number string: {}", e);
-        Some(0)  // ⚠️ Silently corrupts data
+        println!("failed to parse: {}", e);
+        Some(0)  // silently corrupts results
     }
 }
 ```
 
-**Improved Pattern:**
+Don't convert errors to default values. Use `Option`/`Result` properly:
+
 ```rust
-// Day 3 improved: Just return None, filter_map handles it
+// Just return None, let filter_map handle it
 Some(u128::from(result[0]) * 10 + u128::from(result[1]))
 ```
 
-**Why This Matters:**
-- Returning `Some(0)` on errors **silently corrupts your results**
-- In iterator chains, `filter_map` with `None` properly skips invalid data
-- Constructing numbers with arithmetic is faster than `format!` + `parse`
-
-**Error Handling Best Practices:**
-- Don't silently convert errors to default values
-- Use `?` operator to propagate errors
-- Use `Option` and `Result` types, let combinators handle the flow
-- Only `println!` errors in debugging, not production code
+Also: don't `println!` in production code. And `format!("{}{}", a, b).parse()` is slower than `a * 10 + b`.
 
 ---
 
-### 8. Numeric Operations ⭐ LOW PRIORITY
+### 7. Small idioms
 
-**Your Pattern:**
-```rust
-// Day 1, line 42: Manual modular arithmetic
-curr_pos = ((((curr_pos) + (multiplier * dist)) % 100) + 100) % 100;
-```
-
-**Improved Pattern:**
-```rust
-// Day 1 improved, line 99
-curr_pos = (curr_pos + rot.direction.multiplier() * rot.distance).rem_euclid(100);
-```
-
-**Why This Matters:**
-- The `rem_euclid` method exists specifically for this pattern
-- Handles negative numbers correctly
-- More readable and harder to get wrong
-
-**Other Numeric Methods to Know:**
-- `checked_add`, `checked_sub`, etc. - prevent overflow
-- `saturating_add`, `saturating_sub` - clamp at min/max
-- `wrapping_add`, `wrapping_sub` - explicit overflow behavior
+| Your code | Idiomatic |
+|-----------|-----------|
+| `if cond { panic!() }` | `assert!(cond)` |
+| `for i in 0..vec.len()` | `for (i, item) in vec.iter().enumerate()` |
+| `((x % 100) + 100) % 100` | `x.rem_euclid(100)` |
+| `intervals.len() == 0` | `intervals.is_empty()` |
+| `split('\n')` | `lines()` |
+| `let ref r = x[i]` | `let r = &x[i]` |
 
 ---
 
-### 9. Idiomatic Patterns
+## Day-Specific Notes
 
-| Your Code | Idiomatic Rust | Location |
-|-----------|----------------|----------|
-| `if cond { panic!("msg") }` | `assert!(cond, "msg")` | Day 4, line 37 |
-| `while flag { ... flag = false; ... }` | `loop { ... if !cond { break; } }` | Day 4, line 105 |
-| `for i in 0..vec.len()` | `for (i, item) in vec.iter().enumerate()` | Day 4, line 41 |
-| Explicit type annotations everywhere | Let inference work where clear | All files |
-| `is_multiple_of(2)` | `% 2 == 0` | Day 2, line 30 (unstable) |
-| Hard-coded data in functions | Module-level `const` | Day 4, line 25 |
-| `Vec<Vec<char>>` in signatures | `&[Vec<char>]` for read-only | Day 4 improved |
-| `let x: Type = value;` everywhere | `let x = value;` when type is obvious | All files |
+### Day 4: Code duplication
+60 lines duplicated between puzzle1/puzzle2. Extract a helper:
 
----
-
-## Side-by-Side Comparison: Day 4 Example
-
-### Before (Your Code)
 ```rust
-pub fn puzzle1(input: &str) -> u128 {
-    let matrix: Vec<Vec<char>> = input
-        .lines()
-        .map(|r| r.chars().collect::<Vec<char>>())
-        .collect();
-    let mut final_count = 0u128;
-    let check_coordinates = [
-        (0, 1), (0, -1), (1, 0), (-1, 0),
-        (-1, 1), (1, 1), (-1, -1), (1, -1)
-    ];
-    let c_len = check_coordinates.len();
-    let len_i = matrix.len() as i128;
-    if len_i == 0 {
-        panic!("input may not be empty")
-    }
-    let len_j = matrix.first().map(|r| r.len()).unwrap_or(0) as i128;
-    for i in 0..len_i {
-        for j in 0..len_j {
-            if matrix[i as usize][j as usize] != '@' {
-                continue;
-            }
-            let mut count = 0u8;
-            for c in 0..c_len {
-                let i2 = i + check_coordinates[c].0;
-                let j2 = j + check_coordinates[c].1;
-                if i2 < 0 || i2 >= len_i || j2 < 0 || j2 >= len_j {
-                    continue;
-                }
-                if matrix[i2 as usize][j2 as usize] == '@' {
-                    count += 1;
-                }
-            }
-            if count < 4 {
-                final_count += 1;
-            }
-        }
-    }
-    final_count
-}
-```
-
-### After (Improved)
-```rust
-const DIRECTIONS: [(isize, isize); 8] = [
-    (0, 1), (0, -1), (1, 0), (-1, 0),
-    (-1, 1), (1, 1), (-1, -1), (1, -1),
-];
-
 fn count_adjacent(matrix: &[Vec<char>], row: usize, col: usize) -> usize {
-    DIRECTIONS
-        .iter()
+    DIRECTIONS.iter()
         .filter(|(dr, dc)| {
             row.checked_add_signed(*dr)
                 .zip(col.checked_add_signed(*dc))
@@ -366,170 +179,51 @@ fn count_adjacent(matrix: &[Vec<char>], row: usize, col: usize) -> usize {
         })
         .count()
 }
-
-pub fn puzzle1(input: &str) -> u128 {
-    let matrix: Vec<Vec<char>> = input.lines().map(|line| line.chars().collect()).collect();
-    assert!(!matrix.is_empty(), "input may not be empty");
-
-    let mut count = 0;
-    for (i, row) in matrix.iter().enumerate() {
-        for (j, &ch) in row.iter().enumerate() {
-            if ch == '@' && count_adjacent(&matrix, i, j) < 4 {
-                count += 1;
-            }
-        }
-    }
-    count
-}
 ```
 
-**Key Improvements:**
-1. ✅ Extracted `DIRECTIONS` as module-level const
-2. ✅ Created `count_adjacent` helper function
-3. ✅ Used `enumerate()` instead of index-based loops
-4. ✅ Used `checked_add_signed` for safe arithmetic
-5. ✅ Used `assert!` instead of manual panic
-6. ✅ Removed unnecessary type annotations
-7. ✅ No mixing of `i128` and `usize` with dangerous casts
+Also: mixing `i128` and `usize` with constant `as usize` casts is dangerous. Use `isize` for offsets and `checked_add_signed`.
+
+### Day 5: Good algorithmic thinking
+Interval tree implementation shows strong CS fundamentals. Minor issues:
+
+- **`let ref r = intervals[mid]`** → `let r = &intervals[mid]` (day5.rs:97)
+  - `ref` in bindings is old style
+- **`pub` on private struct fields** → remove `pub` (day5.rs:75-78)
+  - `IntervalNode` isn't public, so `pub` does nothing
+- **`From` impl panics** → use `TryFrom` (day5.rs:81-88)
+  - `From` should never panic per conventions
+- **`split('\n').collect()`** → `split_once('-')` (day5.rs:55-57)
+  - More efficient for exactly two parts
+- **`intervals.len() == 0`** → `intervals.is_empty()` (day5.rs:153)
+- **`try_into().expect()`** → `u128::from()` (day5.rs:50)
+  - `usize → u128` is infallible on all platforms
+
+The improved version also dereferences range bounds explicitly (`*intervals[0].start()`) which is clearer than relying on auto-deref in variable bindings.
 
 ---
 
-## Recommended Learning Path
+## What You're Doing Right
 
-### Week 1-2: Master Iterators
-**Focus:** Rewrite your solutions using iterator chains
+- Solutions work correctly
+- Excellent doc comments explaining approach
+- Test cases
+- Algorithm design (especially the interval tree)
+- Past the "fighting the borrow checker" phase
 
-**Resources:**
+---
+
+## Focus Areas
+
+1. **Master iterators** - Biggest impact on code quality. `filter_map`, `flat_map`, `fold`.
+2. **Type-driven design** - Use enums/structs to prevent invalid states.
+3. **Borrowing** - Default to `&T` unless you need ownership.
+
+Run `cargo clippy -- -W clippy::pedantic` to catch many of these automatically.
+
+---
+
+## Resources
+
 - [Rust by Example: Iterators](https://doc.rust-lang.org/rust-by-example/trait/iter.html)
-- [The Rust Book: Ch 13](https://doc.rust-lang.org/book/ch13-00-functional-features.html)
-
-**Exercise:** Rewrite Day 2 puzzle1 line-by-line from imperative to iterator style
-
-**Key Methods to Practice:**
-- `map` - transform each element
-- `filter` - keep only matching elements
-- `filter_map` - transform and filter in one step
-- `flat_map` - flatten nested structures
-- `fold` / `reduce` - accumulate values
-- `zip` - combine two iterators
-- `enumerate` - get indices while iterating
-- `chain` - concatenate iterators
-- `take` / `skip` - limit iteration
-
----
-
-### Week 3-4: Type System Deep Dive
-**Focus:** Learn about newtypes, enums with data, and trait implementation
-
-**Resources:**
-- [The Rust Book: Ch 10 - Generics](https://doc.rust-lang.org/book/ch10-00-generics.html)
-- [Rust by Example: Custom Types](https://doc.rust-lang.org/rust-by-example/custom_types.html)
-
-**Exercise:**
-- Implement `FromStr`, `Display`, `From`, `TryFrom` for your Day 2 `NumberRange`
-- Create a `Direction` enum for Day 1 with methods
-- Create a `Grid` struct for Day 4 with methods like `get_adjacent`
-
-**Concepts to Master:**
-- Newtypes for type safety
-- Enums with associated data
-- Pattern matching on complex types
-- Trait bounds and where clauses
-- Associated types vs generic parameters
-
----
-
-### Week 5-6: Ownership Patterns
-**Focus:** Understand when to use different reference types
-
-**Resources:**
-- [The Rust Book: Ch 4 - Ownership](https://doc.rust-lang.org/book/ch04-00-understanding-ownership.html)
-- [Rust for Rustaceans: Ch 1](https://rust-for-rustaceans.com/)
-
-**Exercise:**
-- Refactor your function signatures to minimize copying
-- Practice writing functions that accept `impl AsRef<str>`
-- Understand the difference between `&[T]` and `Vec<T>` in signatures
-
-**Decision Tree:**
-```
-Do you need to modify the data?
-├─ Yes → &mut T
-└─ No → Do you need to own it?
-    ├─ Yes → T
-    └─ No → Do you need to share across threads?
-        ├─ Yes → Arc<T>
-        └─ No → &T
-```
-
----
-
-### Ongoing: Static Analysis with Clippy
-
-Run `cargo clippy` on all your solutions. It will catch many of these patterns automatically.
-
-```bash
-# Basic lints
-cargo clippy
-
-# Pedantic lints (more suggestions)
-cargo clippy -- -W clippy::pedantic
-
-# Specific categories
-cargo clippy -- -W clippy::all -W clippy::nursery
-```
-
-**Common Clippy Warnings You'll See:**
-- `needless_range_loop` - suggests using iterators
-- `explicit_iter_loop` - suggests `for x in &vec` instead of `for i in 0..vec.len()`
-- `manual_filter_map` - suggests combining filter and map
-- `cast_lossless` - suggests using `From` instead of `as`
-- `module_name_repetitions` - naming conventions
-
----
-
-## Your Strengths
-
-1. ✅ **Algorithm design**: Your logic is sound (all solutions work correctly)
-2. ✅ **Comments & documentation**: Excellent doc comments explaining your approach
-3. ✅ **Error handling awareness**: You think about edge cases (leading zeros, bounds checking)
-4. ✅ **Testing**: You write comprehensive test cases
-5. ✅ **Problem understanding**: Clear summaries show you fully grasp the challenges
-
-> **Key Insight:** You're past the "fighting the borrow checker" phase and into the "writing working Rust" phase. The next level is **idiomatic Rust**—leveraging the language's features to write code that is simultaneously safer, clearer, and more efficient.
-
----
-
-## Summary: Top 3 Focus Areas
-
-### 1. 🎯 Master Iterator Chains
-This will have the biggest impact on your code quality. Iterator chains are:
-- More concise
-- More composable
-- Often more performant
-- Easier to reason about (no mutation)
-
-### 2. 🎯 Learn Type-Driven Design
-Start thinking "what types can I create to make invalid states unrepresentable?" Instead of:
-- Magic numbers → Enums
-- Tuples → Structs with named fields
-- Primitive types → Newtype wrappers
-
-### 3. 🎯 Understand Borrowing in Function Signatures
-Default to borrowing (`&T`) unless you need ownership. Learn patterns like:
-- `&str` vs `String`
-- `&[T]` vs `Vec<T>`
-- `impl AsRef<T>` for flexibility
-
----
-
-## Next Steps
-
-1. **Immediate:** Run `cargo clippy -- -W clippy::pedantic` on your solutions
-2. **This week:** Pick one solution and refactor it using iterator chains
-3. **This month:** Implement standard traits (`FromStr`, `Display`, etc.) for your custom types
-4. **Ongoing:** Read "Rust for Rustaceans" for advanced patterns
-
----
-
-*Generated from analysis of Advent of Code 2025 solutions (Days 1-4)*
+- [The Rust Book Ch 13: Functional Features](https://doc.rust-lang.org/book/ch13-00-functional-features.html)
+- [Rust API Guidelines](https://rust-lang.github.io/api-guidelines/)
