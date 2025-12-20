@@ -202,6 +202,144 @@ The improved version also dereferences range bounds explicitly (`*intervals[0].s
 
 ---
 
+## Day 6 Additions
+
+### 8. Extract helper functions to eliminate duplication (DRY)
+
+```rust
+// Day 6 - duplicated code in puzzle1 and puzzle2
+let mut input_file = File::open(input_path).expect("failed to read input for day 6");
+let mut reader = BufReader::new(input_file);
+let mut newline_offsets: Vec<u64> = vec![0];
+let mut buf = Vec::new();
+loop {
+    buf.clear();
+    let bytes_read = reader.read_until(b'\n', &mut buf).expect("failed to scan input file for newlines");
+    if bytes_read == 0 { break; }
+    newline_offsets.push(newline_offsets.last().unwrap() + bytes_read as u64);
+}
+```
+
+Extract to a helper function:
+
+```rust
+// Improved
+fn read_line_offsets(path: &str) -> (File, Vec<Range<u64>>) {
+    let file = File::open(path).expect("failed to open input file");
+    let mut reader = BufReader::new(file);
+    let mut offsets = vec![0u64];
+    let mut buf = Vec::new();
+
+    loop {
+        buf.clear();
+        let bytes_read = reader.read_until(b'\n', &mut buf)
+            .expect("failed to scan input file for newlines");
+        if bytes_read == 0 { break; }
+        offsets.push(offsets.last().unwrap() + bytes_read as u64);
+    }
+
+    let ranges = offsets.windows(2).map(|w| w[0]..w[1]).collect();
+    (reader.into_inner(), ranges)
+}
+```
+
+If code is duplicated between functions, extract it to a helper. This is the DRY (Don't Repeat Yourself) principle.
+
+---
+
+### 9. Use `mem::take` for moving values
+
+```rust
+// Day 6 - your version
+numbers = vec![];
+operation = None;
+num_string = String::new();
+```
+
+Better with `mem::take`:
+
+```rust
+// Improved
+let nums = mem::take(&mut numbers);
+match operation.take().unwrap() {
+    Operation::Add => total_sum += nums.iter().sum::<i64>(),
+    Operation::Multiply => total_sum += nums.iter().product::<i64>(),
+}
+```
+
+`mem::take(&mut x)` moves the value out of `x` and replaces it with `Default::default()`. This is clearer than reassigning empty collections and works with `Option::take()` too.
+
+---
+
+### 10. Local closures for repeated logic
+
+```rust
+// Day 6 - your version (repeated 6+ times)
+let mut buf = [0u8; 1];
+input_file.read_at(&mut buf, char_offset).expect("failed to read the next byte");
+let c = buf[0] as char;
+```
+
+Extract to a closure:
+
+```rust
+// Improved
+let read_byte = |offset: u64| -> char {
+    let mut buf = [0u8; 1];
+    file.read_at(&mut buf, offset).expect("failed to read byte");
+    buf[0] as char
+};
+
+// Usage
+let c = read_byte(offset);
+```
+
+Local closures are perfect for repeated logic within a single function, especially when they capture local variables.
+
+---
+
+### 11. Match with pattern guards
+
+```rust
+// Day 6 - your version (using unstable let_chains)
+if let Some(o) = operation && !numbers.is_empty() {
+    match o {
+        Operations::Add => { ... },
+        Operations::Multiply => { ... }
+    }
+}
+```
+
+Use stable pattern guards:
+
+```rust
+// Improved
+match operation {
+    Some(Operation::Add) if !numbers.is_empty() => {
+        total_sum += numbers.iter().sum::<i64>();
+    }
+    Some(Operation::Multiply) if !numbers.is_empty() => {
+        total_sum += numbers.iter().product::<i64>();
+    }
+    _ => break,
+}
+```
+
+Pattern guards (`if condition`) in match arms are stable and more idiomatic than unstable `let_chains`.
+
+---
+
+### 12. Small idioms (continued)
+
+| Your code | Idiomatic | Context |
+|-----------|-----------|---------|
+| `type Operations = ArithmeticEnum` | Just rename to `Operation` | Avoid redundant type aliases |
+| `4277556` | `4_277_556` | Numeric literal readability |
+| `#[derive(Debug)]` on simple enum | `#[derive(Debug, Clone, Copy)]` | Simple enums should derive Copy |
+| `keep_processing` flag | `found_content` | Name what you're checking, not the loop control |
+
+---
+
 ## What You're Doing Right
 
 - Solutions work correctly
