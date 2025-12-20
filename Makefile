@@ -1,7 +1,6 @@
 # From https://stackoverflow.com/a/14061796
-# If the first argument is "run"...
-ifeq (run,$(firstword $(MAKECMDGOALS)))
-  # use the rest as arguments for "run"
+ifneq (,$(filter run profile,$(firstword $(MAKECMDGOALS))))
+  # use the rest as arguments
   RUN_ARGS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
   # ...and turn them into do-nothing targets
   $(eval $(RUN_ARGS):;@:)
@@ -33,3 +32,6 @@ lint:
 fix:
 	@echo "Linting and fixing code"
 	@cargo clippy --fix
+profile:
+	@echo "Running performance profiling"
+	@CARGO_PROFILE_RELEASE_DEBUG=true cargo flamegraph --bin $(RUN_ARGS)

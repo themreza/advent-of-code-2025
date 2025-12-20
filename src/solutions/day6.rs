@@ -25,6 +25,9 @@ use std::{fs::File, io::{BufRead, BufReader}, os::unix::fs::FileExt};
 /// storing the offset ranges in memory, reading the first range until hitting the first whitespace, switching to the next 
 /// range and repeating until the first column is read, then performing the operation and continuing.
 /// 
+/// While this solution works with an input data of any size, it is bottlenecked by the input/output operations per second
+/// (IOPS) of the storage.
+/// 
 #[must_use]
 pub fn puzzle1(input_path: &str) -> i64 {
     let mut input_file = File::open(input_path).expect("failed to read input for day 6");
