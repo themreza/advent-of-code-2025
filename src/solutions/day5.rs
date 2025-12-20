@@ -1,3 +1,5 @@
+#![allow(clippy::all)]
+
 //! # Day 5: Cafeteria ([challenge description](https://adventofcode.com/2025/day/5))
 
 use std::{collections::VecDeque, ops::RangeInclusive};
