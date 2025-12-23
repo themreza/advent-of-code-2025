@@ -36,6 +36,8 @@ I used Claude 4.5 Opus with the following prompt to generate the improved versio
 
 After submitting the solution for day 4, I asked Claude to analyze my coding pattern across the previous days and provide an overview of what to focus on ([`improvements.md`](improvements.md)). Around this time, I also began checking for Clippy's linter suggestions. To preserve a timeline of my improvements, I did not modify the source code of my previous submissions and added `#![allow(clippy::all)]` to hide suggestions for those files.
 
+On Day 7, I got a bit stuck with puzzle 2, so I had to ask questions from Claude to understand where the bug in my code was and how to fix it. 
+
 ## Author
 
 Challenges written by [Eric Wastl (Advent of Code)](https://adventofcode.com/2025/about).

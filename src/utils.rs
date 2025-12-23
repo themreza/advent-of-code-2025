@@ -19,7 +19,8 @@ pub fn str_slice_to_vec_string(input: &[&str]) -> Vec<String> {
 }
 
 pub fn string_to_file(content: &str) -> String {
-    let path = std::env::temp_dir().join(format!("tmp_{}", std::process::id()));
+    let tid = format!("{:?}", std::thread::current().id());
+    let path = std::env::temp_dir().join(format!("tmp_{}", tid));
     std::fs::write(&path, content).unwrap();
     path.into_os_string().into_string().expect("failed to get temp file path")
 }

@@ -36,6 +36,8 @@ pub fn puzzle1(input_path: &str) -> i64 {
     let mut buf = Vec::new();
     loop {
         buf.clear();
+        // Note: I realized that read_until still puts the entire first line in memory, so it might not be able to handle 
+        // extremely long inputs after all. I'm keeping it as is but I'll take a more efficient approach in day 7.
         let bytes_read = reader.read_until(b'\n', &mut buf).expect("failed to scan input file for newlines");
         if bytes_read == 0 {
             break;
