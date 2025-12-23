@@ -340,6 +340,277 @@ Pattern guards (`if condition`) in match arms are stable and more idiomatic than
 
 ---
 
+## Day 7 Additions
+
+### 13. Constants for magic values
+
+```rust
+// Day 7 - your version
+if char_buf[0] == b'S' { ... }
+if char_buf[0] == b'^' { ... }
+if b == b'\n' { ... }
+```
+
+Define constants at module level:
+
+```rust
+// Improved
+const START_CHAR: u8 = b'S';
+const SPLIT_CHAR: u8 = b'^';
+const NEWLINE: u8 = b'\n';
+
+if char_buf[0] == START_CHAR { ... }
+```
+
+Magic values scattered through code make it harder to update and understand. Named constants document what the values represent and provide a single source of truth.
+
+---
+
+### 14. Type aliases for readability
+
+```rust
+// Day 7 - your version
+type RayNodeRef = Rc<RefCell<RayNode>>;
+
+fn count_unique_paths_dfs_memoized(root_node: &RayNodeRef, ...) -> u64
+fn add_child(parent: &RayNodeRef, child: &RayNodeRef)
+```
+
+Also use type aliases for common tuples:
+
+```rust
+// Improved
+type Position = (usize, usize);
+
+struct RayNode {
+    position: Position,  // clearer than (usize, usize)
+    children: Vec<RayNodeRef>,
+}
+```
+
+Type aliases make signatures more readable and easier to refactor. They're especially valuable for:
+- Complex wrapper types like `Rc<RefCell<T>>`
+- Domain concepts like `Position`, `Coordinate`, `Offset`
+- Consistency across your codebase
+
+---
+
+### 15. Separating construction from wrapping
+
+```rust
+// Day 7 - your version
+impl RayNode {
+    fn new(line_index: usize, char_index: usize) -> RayNodeRef {
+        Rc::new(RefCell::new(RayNode{line_index, char_index, children: Vec::new()}))
+    }
+}
+```
+
+Separate basic construction from wrapper allocation:
+
+```rust
+// Improved
+impl RayNode {
+    fn new(line_index: usize, char_index: usize) -> Self {
+        Self {
+            position: (line_index, char_index),
+            children: Vec::new(),
+        }
+    }
+
+    fn into_ref(self) -> RayNodeRef {
+        Rc::new(RefCell::new(self))
+    }
+}
+
+// Usage
+let root = RayNode::new(row, col).into_ref();
+```
+
+This pattern:
+- Makes `new()` follow the convention of returning `Self`
+- Allows constructing without allocation when testing
+- Separates concerns: construction vs. smart pointer wrapping
+- More composable and flexible
+
+---
+
+### 16. Explicit `drop()` for borrow clarity
+
+```rust
+// Day 7 - your version
+let rn = root_node.borrow();
+let key = (rn.line_index, rn.char_index);
+// ...
+let children = rn.children.clone();
+// Because root_node was borrowed above, it must be released
+drop(rn);
+```
+
+The improved version makes this clearer:
+
+```rust
+// Improved
+let borrowed = node.borrow();
+let key = borrowed.position;
+
+if let Some(&cached) = cache.get(&key) {
+    return cached;
+}
+
+if borrowed.children.is_empty() {
+    return 1;
+}
+
+let children = borrowed.children.clone();
+drop(borrowed); // Release borrow before recursive calls
+```
+
+Using explicit `drop()` with a comment documents *why* you're releasing the borrow. This is especially important before:
+- Recursive calls that might borrow the same data
+- Operations that need to mutably borrow
+- Long-running operations where you want to minimize lock duration
+
+---
+
+### 17. Early returns to flatten control flow
+
+```rust
+// Day 7 - your version
+for r in (0..self.rows).step_by(2) {
+    let mut rays_to_add: Vec<usize> = vec![];
+    let mut rays_to_remove: Vec<usize> = vec![];
+    for c in 0..self.columns {
+        self.file.read_at(&mut char_buf, ((r * self.columns) + c) as u64)...;
+        if r == 0 && char_buf[0] == b'S' {
+            self.rays.insert(c);
+            break;
+        }
+        if char_buf[0] == b'^' && self.rays.contains(&c) {
+            // ... nested logic
+        }
+    }
+    // ... more logic
+}
+```
+
+Use early `continue` to separate concerns:
+
+```rust
+// Improved
+for row in (0..self.rows).step_by(2) {
+    if row == 0 {
+        // Find starting position
+        if let Some(col) = (0..self.columns).find(|&c| self.read_char(0, c) == START_CHAR) {
+            rays.insert(col);
+        }
+        continue;  // Skip to next iteration
+    }
+
+    // Main logic here, no longer nested
+    let splits: Vec<usize> = rays.iter()...;
+    // ...
+}
+```
+
+Early returns/continues reduce nesting and make code easier to follow:
+- Handle special cases first
+- Return/continue early
+- Main logic stays at consistent indentation level
+
+This is sometimes called "guard clauses" or "bouncer pattern".
+
+---
+
+### 18. Iterator chains for filtering + collecting
+
+```rust
+// Day 7 - your version
+let mut rays_to_remove: Vec<usize> = vec![];
+for c in 0..self.columns {
+    if char_buf[0] == b'^' && self.rays.contains(&c) {
+        rays_to_remove.push(c);
+    }
+}
+for rr in rays_to_remove {
+    self.rays.remove(&rr);
+}
+```
+
+Use iterator chains:
+
+```rust
+// Improved
+let splits: Vec<usize> = rays
+    .iter()
+    .copied()
+    .filter(|&col| self.read_char(row, col) == SPLIT_CHAR)
+    .collect();
+
+total_splits += splits.len() as u64;
+
+for col in splits {
+    rays.remove(&col);
+    rays.insert(col - 1);
+    rays.insert(col + 1);
+}
+```
+
+Benefits:
+- No intermediate mutable vectors
+- Clear intent: "filter the rays and collect them"
+- Can chain additional operations easily
+- Often more efficient (no push overhead)
+
+---
+
+### 19. Struct fields: only store what persists
+
+```rust
+// Day 7 - your version
+#[derive(Debug)]
+struct Grid {
+    rows: usize,
+    columns: usize,
+    file: File,
+    // Specifically for Puzzle 1
+    rays: HashSet<usize>,
+    // Specifically for Puzzle 2
+    root_ray_node: Option<RayNodeRef>,
+    ray_map: HashMap<usize, Vec<RayNodeRef>>,
+}
+```
+
+Only store persistent state:
+
+```rust
+// Improved
+#[derive(Debug)]
+struct Grid {
+    rows: usize,
+    columns: usize,
+    file: File,
+    // puzzle-specific state removed
+}
+
+impl Grid {
+    pub fn count_ray_splits(self) -> u64 {
+        let mut rays: HashSet<usize> = HashSet::new();  // local variable
+        let mut total_splits = 0_u64;
+        // ...
+    }
+}
+```
+
+Keep struct fields minimal:
+- Only include state that persists across methods
+- Puzzle-specific state should be local variables
+- Makes the struct more reusable and easier to understand
+- Reduces memory footprint
+- Clearer ownership (Grid doesn't "own" the puzzle state)
+
+---
+
 ## What You're Doing Right
 
 - Solutions work correctly
